@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="app_name">fileTransferToTable</string>
+    <string name="action_settings">Settings</string>
+    <string name="hello_world">Hello world!</string>
+    <string name="host">Host :</string>
+    <string name="jade_port">Jade port :</string>
+    <string name="web_port">Web port :</string>
+    <string name="nickname">Nickname :</string>
+    <string name="directory">Directory :</string>
+    <string name="button_submit">Submit</string>
+    <string name="settings">Settings</string>
+
+</resources>
