@@ -82,6 +82,10 @@ public class SettingsActivity extends Activity {
 				editor.putString("nickname", nicknameField.getText().toString());
 				editor.apply();
 				editor.commit();
+
+				Intent i = new Intent(getApplicationContext(), MainActivity.class);
+				startActivity(i);
+				
 				finish();
 			}
 		};

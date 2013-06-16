@@ -29,7 +29,6 @@ public class AndroidAgent extends Agent implements SendToTableInterface {
 		dfd.setName( getAID() ); 
 		ServiceDescription sd  = new ServiceDescription();
 		sd.setType( "smartphone" );
-		sd.setName( getLocalName() );
 		dfd.addServices(sd);
 
 		try { DFService.register(this, dfd ); }
@@ -48,6 +47,14 @@ public class AndroidAgent extends Agent implements SendToTableInterface {
 		registerO2AInterface(SendToTableInterface.class, this);
 		
 		addBehaviour(new ReloadListener(this));
+
+		AID aid = new AID();
+		aid.setLocalName("manager");
+		
+		openMsg.clearAllReceiver();
+		openMsg.addReceiver(aid);
+		
+		send(openMsg);
 	}
 
 	@Override
@@ -69,11 +76,11 @@ public class AndroidAgent extends Agent implements SendToTableInterface {
 		public void action() {
 			ACLMessage msg = myAgent.receive();
 			if (msg != null) {
-				if (msg.getPerformative() == ACLMessage.INFORM
-						&& msg.getContent().equals("update")) {
+				if (msg.getPerformative() == ACLMessage.INFORM) {
 					Intent broadcast = new Intent();
 					broadcast.setAction("RELOAD_PAGE");
 					logger.log(Level.INFO, "Sending broadcast " + broadcast.getAction());
+					broadcast.putExtra("html", msg.getContent());
 					context.sendBroadcast(broadcast);
 				} else {
 					handleUnexpected(msg);

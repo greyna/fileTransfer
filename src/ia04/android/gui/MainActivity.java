@@ -16,12 +16,12 @@ import jade.wrapper.StaleProxyException;
 
 import java.util.logging.Level;
 
-
 import utc.ia04.filetransfertotable.R;
 
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.IBinder;
+import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.DownloadManager;
@@ -33,6 +33,7 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.content.SharedPreferences;
+import android.graphics.Bitmap;
 import android.util.Log;
 import android.view.KeyEvent;
 import android.view.Menu;
@@ -47,6 +48,7 @@ public class MainActivity extends Activity {
 	final Activity activity = this;
 	WebView webView = null;
 	DownloadManager dlManager;
+	BroadcastReceiver pageReceiver=null;
 	private ValueCallback<Uri> mUploadMessage;
 	private final static int FILECHOOSER_RESULTCODE = 1;
 	public final static int SETTINGS_RESULTCODE = 2;
@@ -54,16 +56,20 @@ public class MainActivity extends Activity {
 	// jade
 	private SendToTableInterface sendToTableInterface;
 	private Logger logger = Logger.getJADELogger(this.getClass().getName());
-	private MicroRuntimeServiceBinder microRuntimeServiceBinder;
-	private ServiceConnection serviceConnection;
+	private MicroRuntimeServiceBinder microRuntimeServiceBinder = null;
+	private ServiceConnection serviceConnection= null;
 	private RuntimeCallback<AgentController> agentStartupCallback = new RuntimeCallback<AgentController>() {
 		@Override
-		public void onSuccess(AgentController arg0) {
-			// TODO Auto-generated method stub
+		public void onSuccess(AgentController a) {
+			try {
+				popDialog("JADE lancé", "agent "+a.getName()+" correctement lancé");
+			} catch (StaleProxyException e) {
+				e.printStackTrace();
+			}
 		}
 		@Override
-		public void onFailure(Throwable arg0) {
-			// TODO Auto-generated method stub
+		public void onFailure(Throwable t) {
+			popDialog("Echec JADE", t.getMessage());
 		}
 	};
 
@@ -72,39 +78,58 @@ public class MainActivity extends Activity {
 	String webPort = "8080";
 	String jadePort = "1099";
 	String nickname = "arthur";
-
-	SharedPreferences settings;
-	@Override
-	protected void onStart() {
-		super.onStart();
-		settings = getSharedPreferences("settings", 0);
-		if (!settings.contains("host")) {
-			Intent i = new Intent(this, SettingsActivity.class);
-			startActivity(i);
-		} else {
-			host = settings.getString("host", "");
-			jadePort = settings.getString("jade_port", "");
-			webPath = settings.getString("directory", "");
-			webPort = settings.getString("web_port", "");
-			nickname = settings.getString("nickname", "");
-			webView.loadUrl("http://" + host + ":" + webPort + webPath);
-			
-			BroadcastReceiver reloadReceiver = new BroadcastReceiver() {
-				@Override
-				public void onReceive(Context context, Intent intent) {
-					webView.reload();
-				}
-			};
-			IntentFilter notificationReloadFilter = new IntentFilter();
-			notificationReloadFilter.addAction("RELOAD_PAGE");
-			registerReceiver(reloadReceiver, notificationReloadFilter);
-			startJade(agentStartupCallback);
-		}
-	}
 	
+	SharedPreferences settings;
+
+//	@Override
+//	protected void onStart() {
+//		super.onStart();
+//
+//		logger.log(Level.INFO, "onstart");
+//		settings = getSharedPreferences("settings", 0);
+//		if (!settings.contains("host")) {
+//			Intent i = new Intent(getApplicationContext(), SettingsActivity.class);
+//			startActivity(i);
+//		} else {
+//			init();
+//			
+//			pageReceiver = new BroadcastReceiver() {
+//				@Override
+//				public void onReceive(Context context, Intent intent) {
+//					webView.loadData(intent.getStringExtra("html"), "text/html", null);
+//				}
+//			};
+//			IntentFilter notificationReloadFilter = new IntentFilter();
+//			notificationReloadFilter.addAction("RELOAD_PAGE");
+//			registerReceiver(pageReceiver, notificationReloadFilter);
+//			if (microRuntimeServiceBinder==null)
+//				startJade(agentStartupCallback);
+//		}
+//	}
+
+//	@Override
+//	protected void onStop() {
+//
+//		logger.log(Level.INFO, "on stop");
+//		if (pageReceiver!=null) {
+//			unregisterReceiver(pageReceiver);
+//			pageReceiver=null;
+//		}
+//		deleteJade();
+//		super.onStop();
+//		logger.log(Level.INFO, "after on stop");
+//	}
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
-		super.onCreate(savedInstanceState);setContentView(R.layout.activity_main);
+		super.onCreate(savedInstanceState);
+
+		//logger.log(Level.INFO, "on create");
+		//init();
+		init2();
+	}
+	
+	@SuppressLint("SetJavaScriptEnabled")
+	private void init() {
 		dlManager = (DownloadManager) getSystemService(Context.DOWNLOAD_SERVICE);
 		settings = getSharedPreferences("settings", 0);
 		host = settings.getString("host", "");
@@ -113,16 +138,62 @@ public class MainActivity extends Activity {
 		webPort = settings.getString("web_port", "");
 		nickname = settings.getString("nickname", "");
 		webView = new WebView(this);
+		webView.getSettings().setJavaScriptEnabled(true);
 		webView.setHorizontalScrollBarEnabled(true);
 		webView.setVerticalScrollBarEnabled(true);
 		webView.setWebChromeClient(new MyWebChromeClient());
 		webView.setWebViewClient(new MyWebViewClient());
-		webView.loadUrl("http://" + host + ":" + webPort + webPath);
 		setContentView(webView);
 	}
-	
-	
-	
+	private void init2() {
+
+		setContentView(R.layout.activity_main);
+		webView = (WebView) findViewById(R.id.webView);
+
+		webView = new WebView(this);
+		webView.getSettings().setJavaScriptEnabled(true);
+		webView.loadUrl("http://www.script-tutorials.com/demos/199/index.html");
+		webView.setWebViewClient(new myWebClient2());
+		webView.setWebChromeClient(new WebChromeClient() {  
+			//The undocumented magic method override  
+			//Eclipse will swear at you if you try to put @Override here  
+			// For Android 3.0+
+			
+			public void openFileChooser(ValueCallback<Uri> uploadMsg) {  
+
+				mUploadMessage = uploadMsg;  
+				Intent i = new Intent(Intent.ACTION_GET_CONTENT);  
+				i.addCategory(Intent.CATEGORY_OPENABLE);  
+				i.setType("*/*");  
+				MainActivity.this.startActivityForResult(Intent.createChooser(i,"File Chooser"), FILECHOOSER_RESULTCODE);  
+
+			}
+
+			// For Android 3.0+
+			public void openFileChooser( ValueCallback uploadMsg, String acceptType ) {
+				mUploadMessage = uploadMsg;
+				Intent i = new Intent(Intent.ACTION_GET_CONTENT);
+				i.addCategory(Intent.CATEGORY_OPENABLE);
+				i.setType("*/*");
+				MainActivity.this.startActivityForResult(
+						Intent.createChooser(i, "File Browser"),
+						FILECHOOSER_RESULTCODE);
+			}
+
+			//For Android 4.1
+			public void openFileChooser(ValueCallback<Uri> uploadMsg, String acceptType, String capture){
+				mUploadMessage = uploadMsg;  
+				Intent i = new Intent(Intent.ACTION_GET_CONTENT);  
+				i.addCategory(Intent.CATEGORY_OPENABLE);  
+				i.setType("*/*");  
+				MainActivity.this.startActivityForResult( Intent.createChooser( i, "File Chooser" ), MainActivity.FILECHOOSER_RESULTCODE );
+
+			}
+
+		});
+		
+		setContentView(webView);
+	}
 	public void startJade(final RuntimeCallback<AgentController> agentStartupCallback) {
 
 		final Properties profile = new Properties();
@@ -179,6 +250,8 @@ public class MainActivity extends Activity {
 				@Override
 				public void onFailure(Throwable throwable) {
 					logger.log(Level.SEVERE, "Failed to start the container...");
+					Throwable t = new Throwable("Failed to start the container...");
+					agentStartupCallback.onFailure(t);
 				}
 			});
 		} else {
@@ -213,27 +286,52 @@ public class MainActivity extends Activity {
 		});
 	}
 	
-	private class MyWebViewClient extends WebViewClient {
+	public class myWebClient2 extends WebViewClient
+	{
+	    @Override
+	    public void onPageStarted(WebView view, String url, Bitmap favicon) {
+	        // TODO Auto-generated method stub
+	        super.onPageStarted(view, url, favicon);
+	    }
+
+	    @Override
+	    public boolean shouldOverrideUrlLoading(WebView view, String url) {
+	        // TODO Auto-generated method stub
+
+	        view.loadUrl(url);
+	        return true;
+
+	    }
+
+	    @Override
+	    public void onPageFinished(WebView view, String url) {
+	        super.onPageFinished(view, url);
+	    }
+	}
+	public class MyWebViewClient extends WebViewClient {
 	    @Override
 	    public boolean shouldOverrideUrlLoading(WebView view, String url) {
 	    	// return false;     usual behavior
 	    	// return true;      my code
 
 	    	Uri uri = Uri.parse(url);
-	    	// si upload, laisser le comportement du webChromeClient (fileChooser)
-	    	if (uri.getHost().equals(host) && uri.getPath()=="/tomcat_test/upload-file") {
+	    	// si upload, laisser le comportement du webChromeClient (POST file chosen)
+	    	if (uri.getHost().equals(host) && uri.getPath()=="/fileTransfer/upload-file") {
+	    		logger.log(Level.INFO, "override upload-file");
 	    		return false;
 	        }
 	    	
 	    	// si l'adresse va vers le serveur et si ce n'est pas une upload
 	    	// alors c'est une download
 	    	if (uri.getHost().equals(host)) {
-		    	dlManager.enqueue(new Request(Uri.parse(url)).setNotificationVisibility(Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED));
+	    		logger.log(Level.INFO, "override download-file");
+		    	dlManager.enqueue(new Request(uri)/*.setNotificationVisibility(Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)*/);
 		        return true;
 	    	}
 
 	    	// Sinon il s'agit de l'adresse d'une table
 	    	try {
+	    		logger.log(Level.INFO, "override open-file on table");
 	    		sendToTableInterface = MicroRuntime.getAgent(nickname)
 	    				.getO2AInterface(SendToTableInterface.class);
 	    		sendToTableInterface.sendToTable(uri.getPath().substring(1), uri.getHost());
@@ -245,7 +343,7 @@ public class MainActivity extends Activity {
 	    	return true;
 	    }
 	}
-	protected class MyWebChromeClient extends WebChromeClient {
+	public class MyWebChromeClient extends WebChromeClient {
 		public void openFileChooser(ValueCallback<Uri> uploadMsg, String AcceptType, String capture) {
 			this.openFileChooser(uploadMsg);
 		}
@@ -255,13 +353,14 @@ public class MainActivity extends Activity {
 		public void openFileChooser(ValueCallback<Uri> uploadMsg) {
 	        mUploadMessage = uploadMsg;
 	        Intent i = new Intent(Intent.ACTION_GET_CONTENT);
+	        i.addCategory(Intent.CATEGORY_OPENABLE);
 	        i.setType("*/*");
-	        startActivityForResult(Intent.createChooser(i, "file chooser"),FILECHOOSER_RESULTCODE);
+	        MainActivity.this.startActivityForResult(Intent.createChooser(i, "file chooser"),FILECHOOSER_RESULTCODE);
 	    }
 	}
 	@Override
-	protected void onActivityResult(int requestCode, int resultCode,
-	        Intent intent) {
+	protected void onActivityResult(int requestCode, int resultCode, Intent intent) {
+		//logger.log(Level.INFO, "on activity result");
 	    if (requestCode == FILECHOOSER_RESULTCODE) {
 	        if (null == mUploadMessage)
 	            return;
@@ -270,8 +369,8 @@ public class MainActivity extends Activity {
 	        mUploadMessage.onReceiveValue(result);
 	        mUploadMessage = null;
 	    }
-	    else if (requestCode == SETTINGS_RESULTCODE)
-	    	deleteJade();
+//	    else if (requestCode == SETTINGS_RESULTCODE)
+//	    	deleteJade();
 	}
 
 	
@@ -286,21 +385,27 @@ public class MainActivity extends Activity {
     	dialog.show();
 	}
 	public void deleteJade() {
+		if (microRuntimeServiceBinder!=null) {
 			logger.log(Level.INFO, "Stopping Jade...");
 			microRuntimeServiceBinder
 			.stopAgentContainer(new RuntimeCallback<Void>() {
 				@Override
 				public void onSuccess(Void thisIsNull) {
-					//startJade(agentStartupCallback);
+						logger.log(Level.INFO, "JADE stopped and restarting...");
+						popDialog("JADE stoppé", "JADE se relance avec vos nouveaux paramètres...");
+						//startJade(agentStartupCallback);
 				}
-
 				@Override
 				public void onFailure(Throwable throwable) {
 					logger.log(Level.SEVERE, "Failed to stop the "
 							+ AndroidAgent.class.getName()
 							+ "...");
+					logger.log(Level.INFO, "JADE cannot stop and restarts...");
+					popDialog("JADE not running", "JADE se relance avec vos nouveaux paramètres...");
+					//startJade(agentStartupCallback);
 				}
 			});
+		}
 	}
 	@Override
 	public boolean onCreateOptionsMenu(Menu menu) {
@@ -312,30 +417,24 @@ public class MainActivity extends Activity {
 	public boolean onOptionsItemSelected(MenuItem item) {
 		Intent i = new Intent(this, SettingsActivity.class);
 		startActivity(i);
-//		try {
-//    		sendToTableInterface = MicroRuntime.getAgent(nickname)
-//    				.getO2AInterface(SendToTableInterface.class);
-//    		sendToTableInterface.sendToTable("lol.jpg", "Table");
-//    	} catch (StaleProxyException e) {
-//    		e.printStackTrace();
-//    	} catch (ControllerException e) {
-//    		e.printStackTrace();
-//    	}
+//		String content =  "<html><body>" +
+//                "<form action=\"http://172.17.1.34:8080/fileTransfer/upload-file\" " +
+//                "method=\"post\" name=\"uploadForm\" enctype=\"multipart/form-data\">" +
+//                "<p><input name=\"uploadfile\" type=\"file\" size=\"50\"></p>" +
+//                "<p></p><input name=\"submit\" type=\"submit\" value=\"Submit\">" +
+//                "</form></body></html>";
+//		webView.loadData(content, "text/html", null);
+//		logger.log(Level.INFO, "after loaddata");
 		return true;
 	}
 	@Override
 	public boolean onKeyDown(int keyCode, KeyEvent event) {
-	    if ((keyCode == KeyEvent.KEYCODE_BACK) && webView.canGoBack()) {
-	    	webView.goBack();
-	        return true;
-	    }
+//	    if ((keyCode == KeyEvent.KEYCODE_BACK) && webView.canGoBack()) {
+//	    	webView.goBack();
+//	        return true;
+//	    }
 	    finish();
 	    return true;
-	}
-	@Override
-	protected void onDestroy() {
-		deleteJade();
-		super.onDestroy();
 	}
 	public String getHost() {
 		return host;
