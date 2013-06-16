@@ -52,7 +52,7 @@ public class MainActivity extends Activity {
 	private ValueCallback<Uri> mUploadMessage;
 	private final static int FILECHOOSER_RESULTCODE = 1;
 	public final static int SETTINGS_RESULTCODE = 2;
-	
+
 	// jade
 	private SendToTableInterface sendToTableInterface;
 	private Logger logger = Logger.getJADELogger(this.getClass().getName());
@@ -78,47 +78,47 @@ public class MainActivity extends Activity {
 	String webPort = "8080";
 	String jadePort = "1099";
 	String nickname = "arthur";
-	
+
 	SharedPreferences settings;
 
-//	@Override
-//	protected void onStart() {
-//		super.onStart();
-//
-//		logger.log(Level.INFO, "onstart");
-//		settings = getSharedPreferences("settings", 0);
-//		if (!settings.contains("host")) {
-//			Intent i = new Intent(getApplicationContext(), SettingsActivity.class);
-//			startActivity(i);
-//		} else {
-//			init();
-//			
-//			pageReceiver = new BroadcastReceiver() {
-//				@Override
-//				public void onReceive(Context context, Intent intent) {
-//					webView.loadData(intent.getStringExtra("html"), "text/html", null);
-//				}
-//			};
-//			IntentFilter notificationReloadFilter = new IntentFilter();
-//			notificationReloadFilter.addAction("RELOAD_PAGE");
-//			registerReceiver(pageReceiver, notificationReloadFilter);
-//			if (microRuntimeServiceBinder==null)
-//				startJade(agentStartupCallback);
-//		}
-//	}
+	//	@Override
+	//	protected void onStart() {
+	//		super.onStart();
+	//
+	//		logger.log(Level.INFO, "onstart");
+	//		settings = getSharedPreferences("settings", 0);
+	//		if (!settings.contains("host")) {
+	//			Intent i = new Intent(getApplicationContext(), SettingsActivity.class);
+	//			startActivity(i);
+	//		} else {
+	//			init();
+	//			
+	//			pageReceiver = new BroadcastReceiver() {
+	//				@Override
+	//				public void onReceive(Context context, Intent intent) {
+	//					webView.loadData(intent.getStringExtra("html"), "text/html", null);
+	//				}
+	//			};
+	//			IntentFilter notificationReloadFilter = new IntentFilter();
+	//			notificationReloadFilter.addAction("RELOAD_PAGE");
+	//			registerReceiver(pageReceiver, notificationReloadFilter);
+	//			if (microRuntimeServiceBinder==null)
+	//				startJade(agentStartupCallback);
+	//		}
+	//	}
 
-//	@Override
-//	protected void onStop() {
-//
-//		logger.log(Level.INFO, "on stop");
-//		if (pageReceiver!=null) {
-//			unregisterReceiver(pageReceiver);
-//			pageReceiver=null;
-//		}
-//		deleteJade();
-//		super.onStop();
-//		logger.log(Level.INFO, "after on stop");
-//	}
+	//	@Override
+	//	protected void onStop() {
+	//
+	//		logger.log(Level.INFO, "on stop");
+	//		if (pageReceiver!=null) {
+	//			unregisterReceiver(pageReceiver);
+	//			pageReceiver=null;
+	//		}
+	//		deleteJade();
+	//		super.onStop();
+	//		logger.log(Level.INFO, "after on stop");
+	//	}
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
@@ -127,7 +127,7 @@ public class MainActivity extends Activity {
 		//init();
 		init2();
 	}
-	
+
 	@SuppressLint("SetJavaScriptEnabled")
 	private void init() {
 		dlManager = (DownloadManager) getSystemService(Context.DOWNLOAD_SERVICE);
@@ -145,6 +145,11 @@ public class MainActivity extends Activity {
 		webView.setWebViewClient(new MyWebViewClient());
 		setContentView(webView);
 	}
+
+	private int mReturnCode;
+    private int mResultCode;
+    private Intent mResultIntent;
+    private boolean mUploadFileOnLoad = false;
 	private void init2() {
 
 		setContentView(R.layout.activity_main);
@@ -158,7 +163,7 @@ public class MainActivity extends Activity {
 			//The undocumented magic method override  
 			//Eclipse will swear at you if you try to put @Override here  
 			// For Android 3.0+
-			
+
 			public void openFileChooser(ValueCallback<Uri> uploadMsg) {  
 
 				mUploadMessage = uploadMsg;  
@@ -191,7 +196,7 @@ public class MainActivity extends Activity {
 			}
 
 		});
-		
+
 		setContentView(webView);
 	}
 	public void startJade(final RuntimeCallback<AgentController> agentStartupCallback) {
@@ -285,63 +290,63 @@ public class MainActivity extends Activity {
 			}
 		});
 	}
-	
+
 	public class myWebClient2 extends WebViewClient
 	{
-	    @Override
-	    public void onPageStarted(WebView view, String url, Bitmap favicon) {
-	        // TODO Auto-generated method stub
-	        super.onPageStarted(view, url, favicon);
-	    }
+		@Override
+		public void onPageStarted(WebView view, String url, Bitmap favicon) {
+			// TODO Auto-generated method stub
+			super.onPageStarted(view, url, favicon);
+		}
 
-	    @Override
-	    public boolean shouldOverrideUrlLoading(WebView view, String url) {
-	        // TODO Auto-generated method stub
+		@Override
+		public boolean shouldOverrideUrlLoading(WebView view, String url) {
+			// TODO Auto-generated method stub
 
-	        view.loadUrl(url);
-	        return true;
+			view.loadUrl(url);
+			return true;
 
-	    }
+		}
 
-	    @Override
-	    public void onPageFinished(WebView view, String url) {
-	        super.onPageFinished(view, url);
-	    }
+		@Override
+		public void onPageFinished(WebView view, String url) {
+			super.onPageFinished(view, url);
+		}
 	}
 	public class MyWebViewClient extends WebViewClient {
-	    @Override
-	    public boolean shouldOverrideUrlLoading(WebView view, String url) {
-	    	// return false;     usual behavior
-	    	// return true;      my code
+		@Override
+		public boolean shouldOverrideUrlLoading(WebView view, String url) {
+			// return false;     usual behavior
+			// return true;      my code
 
-	    	Uri uri = Uri.parse(url);
-	    	// si upload, laisser le comportement du webChromeClient (POST file chosen)
-	    	if (uri.getHost().equals(host) && uri.getPath()=="/fileTransfer/upload-file") {
-	    		logger.log(Level.INFO, "override upload-file");
-	    		return false;
-	        }
-	    	
-	    	// si l'adresse va vers le serveur et si ce n'est pas une upload
-	    	// alors c'est une download
-	    	if (uri.getHost().equals(host)) {
-	    		logger.log(Level.INFO, "override download-file");
-		    	dlManager.enqueue(new Request(uri)/*.setNotificationVisibility(Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)*/);
-		        return true;
-	    	}
+			Uri uri = Uri.parse(url);
+			// si upload, laisser le comportement du webChromeClient (POST file chosen)
+			if (uri.getHost().equals(host) && uri.getPath()=="/fileTransfer/upload-file") {
+				logger.log(Level.INFO, "override upload-file");
+				return false;
+			}
 
-	    	// Sinon il s'agit de l'adresse d'une table
-	    	try {
-	    		logger.log(Level.INFO, "override open-file on table");
-	    		sendToTableInterface = MicroRuntime.getAgent(nickname)
-	    				.getO2AInterface(SendToTableInterface.class);
-	    		sendToTableInterface.sendToTable(uri.getPath().substring(1), uri.getHost());
-	    	} catch (StaleProxyException e) {
-	    		e.printStackTrace();
-	    	} catch (ControllerException e) {
-	    		e.printStackTrace();
-	    	}
-	    	return true;
-	    }
+			// si l'adresse va vers le serveur et si ce n'est pas une upload
+			// alors c'est une download
+			if (uri.getHost().equals(host)) {
+				logger.log(Level.INFO, "override download-file");
+				dlManager.enqueue(new Request(uri)/*.setNotificationVisibility(Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)*/);
+				return true;
+			}
+
+			// Sinon il s'agit de l'adresse d'une table
+			try {
+				logger.log(Level.INFO, "override open-file on table");
+				sendToTableInterface = MicroRuntime.getAgent(nickname)
+						.getO2AInterface(SendToTableInterface.class);
+				sendToTableInterface.sendToTable(uri.getPath().substring(1), uri.getHost());
+			} catch (StaleProxyException e) {
+				e.printStackTrace();
+			} catch (ControllerException e) {
+				e.printStackTrace();
+			}
+			return true;
+		}
 	}
 	public class MyWebChromeClient extends WebChromeClient {
 		public void openFileChooser(ValueCallback<Uri> uploadMsg, String AcceptType, String capture) {
@@ -351,38 +356,47 @@ public class MainActivity extends Activity {
 			this.openFileChooser(uploadMsg);
 		}
 		public void openFileChooser(ValueCallback<Uri> uploadMsg) {
-	        mUploadMessage = uploadMsg;
-	        Intent i = new Intent(Intent.ACTION_GET_CONTENT);
-	        i.addCategory(Intent.CATEGORY_OPENABLE);
-	        i.setType("*/*");
-	        MainActivity.this.startActivityForResult(Intent.createChooser(i, "file chooser"),FILECHOOSER_RESULTCODE);
-	    }
+			mUploadMessage = uploadMsg;
+			Intent i = new Intent(Intent.ACTION_GET_CONTENT);
+			i.addCategory(Intent.CATEGORY_OPENABLE);
+			i.setType("*/*");
+			MainActivity.this.startActivityForResult(Intent.createChooser(i, "file chooser"),FILECHOOSER_RESULTCODE);
+		}
 	}
 	@Override
 	protected void onActivityResult(int requestCode, int resultCode, Intent intent) {
 		//logger.log(Level.INFO, "on activity result");
-	    if (requestCode == FILECHOOSER_RESULTCODE) {
-	        if (null == mUploadMessage)
-	            return;
-	        Uri result = intent == null || resultCode != RESULT_OK ? null
-	                : intent.getData();
-	        mUploadMessage.onReceiveValue(result);
-	        mUploadMessage = null;
-	    }
-//	    else if (requestCode == SETTINGS_RESULTCODE)
-//	    	deleteJade();
+		if(null==mUploadMessage)
+	    {
+	        mReturnCode = requestCode;
+	        mResultCode = resultCode;
+	        mResultIntent = intent;
+	        mUploadFileOnLoad = true;
+	        return;
+	    }else
+	        mUploadFileOnLoad = false;
+		if (requestCode == FILECHOOSER_RESULTCODE) {
+			if (null == mUploadMessage)
+				return;
+			Uri result = intent == null || resultCode != RESULT_OK ? null
+					: intent.getData();
+			mUploadMessage.onReceiveValue(result);
+			mUploadMessage = null;
+		}
+		//	    else if (requestCode == SETTINGS_RESULTCODE)
+		//	    	deleteJade();
 	}
 
-	
+
 	protected void popDialog(String title, String message) {
-    	// 1. Instantiate an AlertDialog.Builder with its constructor
-    	AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
-    	// 2. Chain together various setter methods to set the dialog characteristics
-    	builder.setMessage(message).setTitle(title);
-    	// 3. Get the AlertDialog from create()
-    	AlertDialog dialog = builder.create();
-    	
-    	dialog.show();
+		// 1. Instantiate an AlertDialog.Builder with its constructor
+		AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
+		// 2. Chain together various setter methods to set the dialog characteristics
+		builder.setMessage(message).setTitle(title);
+		// 3. Get the AlertDialog from create()
+		AlertDialog dialog = builder.create();
+
+		dialog.show();
 	}
 	public void deleteJade() {
 		if (microRuntimeServiceBinder!=null) {
@@ -391,9 +405,9 @@ public class MainActivity extends Activity {
 			.stopAgentContainer(new RuntimeCallback<Void>() {
 				@Override
 				public void onSuccess(Void thisIsNull) {
-						logger.log(Level.INFO, "JADE stopped and restarting...");
-						popDialog("JADE stoppé", "JADE se relance avec vos nouveaux paramètres...");
-						//startJade(agentStartupCallback);
+					logger.log(Level.INFO, "JADE stopped and restarting...");
+					popDialog("JADE stoppé", "JADE se relance avec vos nouveaux paramètres...");
+					//startJade(agentStartupCallback);
 				}
 				@Override
 				public void onFailure(Throwable throwable) {
@@ -417,24 +431,24 @@ public class MainActivity extends Activity {
 	public boolean onOptionsItemSelected(MenuItem item) {
 		Intent i = new Intent(this, SettingsActivity.class);
 		startActivity(i);
-//		String content =  "<html><body>" +
-//                "<form action=\"http://172.17.1.34:8080/fileTransfer/upload-file\" " +
-//                "method=\"post\" name=\"uploadForm\" enctype=\"multipart/form-data\">" +
-//                "<p><input name=\"uploadfile\" type=\"file\" size=\"50\"></p>" +
-//                "<p></p><input name=\"submit\" type=\"submit\" value=\"Submit\">" +
-//                "</form></body></html>";
-//		webView.loadData(content, "text/html", null);
-//		logger.log(Level.INFO, "after loaddata");
+		//		String content =  "<html><body>" +
+		//                "<form action=\"http://172.17.1.34:8080/fileTransfer/upload-file\" " +
+		//                "method=\"post\" name=\"uploadForm\" enctype=\"multipart/form-data\">" +
+		//                "<p><input name=\"uploadfile\" type=\"file\" size=\"50\"></p>" +
+		//                "<p></p><input name=\"submit\" type=\"submit\" value=\"Submit\">" +
+		//                "</form></body></html>";
+		//		webView.loadData(content, "text/html", null);
+		//		logger.log(Level.INFO, "after loaddata");
 		return true;
 	}
 	@Override
 	public boolean onKeyDown(int keyCode, KeyEvent event) {
-//	    if ((keyCode == KeyEvent.KEYCODE_BACK) && webView.canGoBack()) {
-//	    	webView.goBack();
-//	        return true;
-//	    }
-	    finish();
-	    return true;
+		//	    if ((keyCode == KeyEvent.KEYCODE_BACK) && webView.canGoBack()) {
+		//	    	webView.goBack();
+		//	        return true;
+		//	    }
+		finish();
+		return true;
 	}
 	public String getHost() {
 		return host;
